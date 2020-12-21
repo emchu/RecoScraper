@@ -1,6 +1,7 @@
 import psycopg2
 import requests
 from bs4 import BeautifulSoup
+import re
 
 
 def make_soup(url):
@@ -51,8 +52,8 @@ def extract_product(product_url, sex, category_name):
     images = list(dict.fromkeys(images))
 
     for k in soup.find_all("p", class_="product__price"):
-        price = str(k.text)
-        id_price = insert_price(price)
+        price = re.findall("\d+\.\d+", k.text.replace(",", "."))
+        id_price = insert_price(price[0])
 
     for l in soup.find_all("div", class_="product__info"):
         for m in l.find_all("div", class_="row"):
@@ -69,7 +70,7 @@ def extract_product(product_url, sex, category_name):
         insert_picture(o, id_product)
 
 
-conn = psycopg2.connect(host="localhost", database="postgres", user="postgres", password="elomelo320")
+conn = psycopg2.connect(host="localhost", port="5432", user="postgres", database="gorgedb",  password="qwerty")
 
 
 def insert_price(price):
