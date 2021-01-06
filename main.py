@@ -65,12 +65,12 @@ def extract_product(product_url, sex, category_name):
     description = "\n".join(desc)
 
     id_category = find_category(category_name)
-    id_product = insert_product(title, sex, description, 5, id_price, id_category)
+    id_product = insert_product(title, sex, description, product_url, 5, id_price, id_category)
     for o in images:
         insert_picture(o, id_product)
 
 
-conn = psycopg2.connect(host="localhost", port="5432", user="postgres", database="gorgedb",  password="qwerty")
+conn = psycopg2.connect(host="localhost", port="5432", user="postgres", database="postgres",  password="postgres")
 
 
 def insert_price(price):
@@ -132,11 +132,11 @@ def find_category(category):
     return id_category
 
 
-def insert_product(product, sex, desc, id_store, id_price, id_category):
-    sql = """INSERT INTO product(name, sex, descr, id_store, id_price, id_category)
-             VALUES(%s, %s, %s, %s, %s, %s) RETURNING id_product;"""
+def insert_product(product, sex, desc, link, id_store, id_price, id_category):
+    sql = """INSERT INTO product(name, sex, descr, link, id_store, id_price, id_category)
+             VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING id_product;"""
     cur = conn.cursor()
-    cur.execute(sql, (product, sex, desc, id_store, id_price, id_category,))
+    cur.execute(sql, (product, sex, desc, link, id_store, id_price, id_category,))
     id_product = cur.fetchone()[0]
     conn.commit()
     cur.close()

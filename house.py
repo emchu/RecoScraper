@@ -1,10 +1,12 @@
 import time
-
 import psycopg2
 import requests
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import re
+
+CHROMEDRIVER_PATH = "C:/Users/Aleksandra/PycharmProjects/RecoScraper/venv/Scripts/chromedriver.exe"
 
 
 def make_soup(url):
@@ -14,19 +16,30 @@ def make_soup(url):
 
 
 def soup2(url):
-    driver = webdriver.PhantomJS()
-    driver.get(url)
-    # time.sleep(25)
-    htmlSource = driver.page_source
-    soup = BeautifulSoup(htmlSource)
-    return soup
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(CHROMEDRIVER_PATH, 0, options=options)
+    try:
+        driver.get(url)
+        htmlSource = driver.page_source
+        soup = BeautifulSoup(htmlSource)
+        return soup
+    except ConnectionResetError as e:
+        time.sleep(250)
+        driver.get(url)
+        htmlSource = driver.page_source
+        soup = BeautifulSoup(htmlSource)
+        return soup
 
 
 def extract_sex():
     url = "https://www.housebrand.com/pl/pl/"
     soup = make_soup(url)
-    ul_her = soup.find("ul", {"class": "category-tree-wrapper menuOna"}).find("li", {"class": "category-tree"}).find_all("a", href=True)
-    ul_him = soup.find("ul", {"class": "category-tree-wrapper menuOn"}).find("li", {"class": "category-tree"}).find_all("a", href=True)
+    ul_her = soup.find("ul", {"class": "category-tree-wrapper menuOna"}).find("li",
+                                                                              {"class": "category-tree"}).find_all("a",
+                                                                                                                   href=True)
+    ul_him = soup.find("ul", {"class": "category-tree-wrapper menuOn"}).find("li", {"class": "category-tree"}).find_all(
+        "a", href=True)
 
     extract_category(ul_her, "ona")
     extract_category(ul_him, "on")
@@ -93,13 +106,13 @@ def extract_product(product_url, sex, category_name):
     description = "\n".join(desc)
 
     id_category = find_category(category_name)
-    id_product = insert_product(title, sex, description, 6, id_price, id_category)
+    id_product = insert_product(title, sex, description, product_url, 6, id_price, id_category)
     for o in images:
         insert_picture(o, id_product)
     print(title)
 
 
-conn = psycopg2.connect(host="localhost", port="5432", user="postgres", database="gorgedb",  password="qwerty")
+conn = psycopg2.connect(host="localhost", port="5432", user="postgres", database="postgres", password="postgres")
 
 
 def insert_price(price):
@@ -164,11 +177,11 @@ def find_category(category):
     return id_category
 
 
-def insert_product(product, sex, desc, id_store, id_price, id_category):
-    sql = """INSERT INTO product(name, sex, descr, id_store, id_price, id_category)
-             VALUES(%s, %s, %s, %s, %s, %s) RETURNING id_product;"""
+def insert_product(product, sex, desc, product_url, id_store, id_price, id_category):
+    sql = """INSERT INTO product(name, sex, descr, link, id_store, id_price, id_category)
+             VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING id_product;"""
     cur = conn.cursor()
-    cur.execute(sql, (product, sex, desc, id_store, id_price, id_category,))
+    cur.execute(sql, (product, sex, desc, product_url, id_store, id_price, id_category,))
     id_product = cur.fetchone()[0]
     conn.commit()
     cur.close()
@@ -181,6 +194,8 @@ def insert_product(product, sex, desc, id_store, id_price, id_category):
 def main():
     extract_sex()
     # category_url = "https://wearmedicine.com/k/on/odziez/t-shirty-i-polo"
+
+
 #     # extract_products(category_url)
 #     product_url = "https://wearmedicine.com/p/medicine-t-shirt-meski-z-nadrukiem-music-wall-szary-16784"
 #     extract_product(product_url, "on", "T-shirty i polo")
